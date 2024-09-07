@@ -1,0 +1,320 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(plm)
+library(randomForest)
+
+```
+
+
+```{r}
+PE <- read_excel("/home/ed/Downloads/PE/PE.xlsx")
+View(PE)
+
+```
+
+```{r}
+head(PE)
+```
+
+```{r}
+ggplot(PE, aes(x = `RETURN ON ASSETS`)) + 
+  geom_histogram(binwidth = 100, fill = "skyblue", color = "black") + 
+  facet_wrap(~ `Fund name`) +  # Facet by the "Fund name" variable
+  labs(title = "ROA Distribution by Fund",
+       x = "Return on Assets (ROA)",
+       y = "Count") + 
+  theme_minimal()
+
+```
+```{r}
+ggplot(PE, aes(x = `Fund name`, y = `RETURN ON ASSETS`)) + 
+  geom_boxplot(fill = "lightblue", color = "black") + 
+  facet_wrap(~ `Fund name`, scales = "free") +  # Facet by the "Fund name" variable
+  labs(title = "ROA Distribution by Fund (Boxplot)",
+       x = "Fund Name",
+       y = "Return on Assets (ROA)") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank())  # Optionally remove x-axis labels for cleaner presentation
+
+
+```
+
+```{r}
+ggplot(PE, aes(x = `Fund name`, y = `CAPITAL`)) + 
+  geom_boxplot(fill = "lightblue", color = "black") + 
+  facet_wrap(~ `Fund name`, scales = "free") +  # Facet by the "Fund name" variable
+  labs(title = "CAPITAL Distribution by Fund (Boxplot)",
+       x = "Fund Name",
+       y = "CAPITAL") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank())  # Optionally remove x-axis labels for cleaner presentation
+
+ggplot(PE, aes(x = Name, y = `CAPITAL`, group = `Fund name`)) + 
+  geom_line(color = "blue") +  # Create time series line
+  facet_wrap(~ `Fund name`, scales = "free_y") +  # Facet by Fund name
+  labs(title = "Time Series of CAPITAL by Fund",
+       x = "Year",
+       y = "CAPITAL") + 
+  theme_minimal()
+```
+
+```{r}
+ggplot(PE, aes(x = `Fund name`, y = `NAV`)) + 
+  geom_boxplot(fill = "lightblue", color = "black") + 
+  facet_wrap(~ `Fund name`, scales = "free") +  # Facet by the "Fund name" variable
+  labs(title = "NAV Distribution by Fund (Boxplot)",
+       x = "Fund Name",
+       y = "NAV") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank())  # Optionally remove x-axis labels for cleaner presentation
+
+ggplot(PE, aes(x = Name, y = `NAV`, group = `Fund name`)) + 
+  geom_line(color = "blue") +  # Create time series line
+  facet_wrap(~ `Fund name`, scales = "free_y") +  # Facet by Fund name
+  labs(title = "Time Series of NAV by Fund",
+       x = "Year",
+       y = "NAV") + 
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(PE, aes(x = `Fund name`, y = `TDTCS`)) + 
+  geom_boxplot(fill = "lightblue", color = "black") + 
+  facet_wrap(~ `Fund name`, scales = "free") +  # Facet by the "Fund name" variable
+  labs(title = "Total Debt as a Percentage of Total Capital/Standard Deviation",
+       x = "Fund Name",
+       y = "Total Debt as a Percentage of Total Capital/Standard Deviation") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank())  # Optionally remove x-axis labels for cleaner presentation
+
+ggplot(PE, aes(x = Name, y = `TDTCS`, group = `Fund name`)) + 
+  geom_line(color = "blue") +  # Create time series line
+  facet_wrap(~ `Fund name`, scales = "free_y") +  # Facet by Fund name
+  labs(title = "Time Series of Total Debt as a Percentage of Total Capital/Standard Deviation by Fund",
+       x = "Year",
+       y = "Total Debt as a Percentage of Total Capital/Standard Deviation") + 
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(PE, aes(x = `Fund name`, y = `debtratio`)) + 
+  geom_boxplot(fill = "lightblue", color = "black") + 
+  facet_wrap(~ `Fund name`, scales = "free") +  # Facet by the "Fund name" variable
+  labs(title = "Debt to Asset Ratio",
+       x = "Fund Name",
+       y = "Debt to Asset Ratio") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank())  # Optionally remove x-axis labels for cleaner presentation
+
+
+ggplot(PE, aes(x = Name, y = `debtratio`, group = `Fund name`)) + 
+  geom_line(color = "blue") +  # Create time series line
+  facet_wrap(~ `Fund name`, scales = "free_y") +  # Facet by Fund name
+  labs(title = "Time Series of Debt to Asset Ratio by Fund",
+       x = "Year",
+       y = "Debt to Asset Ratio") + 
+  theme_minimal()
+```
+
+```{r}
+ggplot(PE, aes(x = Name, y = `RETURN ON ASSETS`, group = `Fund name`)) + 
+  geom_line(color = "blue") +  # Create time series line
+  facet_wrap(~ `Fund name`, scales = "free_y") +  # Facet by Fund name
+  labs(title = "Time Series of Return on Assets by Fund",
+       x = "Year",
+       y = "Return on Assets (ROA)") + 
+  theme_minimal()
+
+```
+
+```{r}
+colnames(PE)
+```
+
+Panel Regression Analysis
+
+```{r}
+colnames(PE)[colnames(PE) == "Name"] <- "Year"
+colnames(PE)
+
+```
+
+```{r}
+colnames(PE)[colnames(PE) == "Fund name"] <- "fundname"
+colnames(PE)
+
+```
+
+```{r}
+colnames(PE)[colnames(PE) == "ROA"] <- "RETURN ON ASSETS"
+colnames(PE)
+
+```
+
+```{r}
+# Define the panel data structure, with "fundname" as the individual identifier and "Year" as the time variable
+PE_panel <- pdata.frame(PE, index = c("fundname", "Year"))
+```
+```{r}
+head(PE_panel)
+```
+
+```{r}
+# Perform panel regression: Return on Assets as dependent variable, others as independent
+panel_model <- plm(RETURN.ON.ASSETS ~ CAPITAL + NAV + TDTCS + debtratio, 
+                   data = PE_panel, 
+                   model = "within")  # "within" specifies a fixed effects model
+
+# Summarize the results
+summary(panel_model)
+
+```
+
+```{r}
+# Perform panel regression: Return on Assets as dependent variable, others as independent
+panel_model <- plm(RETURN.ON.ASSETS ~ CAPITAL + NAV + TDTCS + debtratio, 
+                   data = PE_panel, 
+                   model = "random")  # "within" specifies a fixed effects model
+
+# Summarize the results
+summary(panel_model)
+```
+
+```{r}
+# Extract residuals from the panel model
+residuals <- residuals(panel_model)
+
+# Plot residuals to check for homoscedasticity (constant variance)
+plot(fitted(panel_model), residuals, 
+     xlab = "Fitted Values", ylab = "Residuals", 
+     main = "Residuals vs Fitted Values")
+abline(h = 0, col = "red")
+
+```
+```{r}
+# Q-Q plot to check if residuals are normally distributed
+qqnorm(residuals, main = "Normal Q-Q Plot")
+qqline(residuals, col = "red")
+
+```
+
+```{r}
+# Histogram of residuals to check for normal distribution
+hist(residuals, breaks = 20, col = "lightblue", 
+     main = "Histogram of Residuals", xlab = "Residuals")
+
+```
+```{r}
+# Perform Durbin-Watson test to check for autocorrelation in residuals
+library(lmtest)
+dwtest(panel_model)
+
+```
+```{r}
+library(ggplot2)
+
+# Residuals vs Fitted values plot using ggplot2
+ggplot(data = data.frame(fitted = fitted(panel_model), residuals = residuals(panel_model)), 
+       aes(x = fitted, y = residuals)) + 
+  geom_point(color = "blue") + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") + 
+  labs(title = "Residuals vs Fitted Values", x = "Fitted Values", y = "Residuals") + 
+  theme_minimal()
+
+# Histogram of residuals using ggplot2
+ggplot(data = data.frame(residuals = residuals(panel_model)), aes(x = residuals)) + 
+  geom_histogram(binwidth = 0.1, fill = "lightblue", color = "black") + 
+  labs(title = "Histogram of Residuals", x = "Residuals", y = "Frequency") + 
+  theme_minimal()
+
+```
+```{r}
+# Check the structure of the data
+str(PE_panel)
+
+
+
+```
+```{r}
+# If needed, remove rows with missing values
+PE_panel <- na.omit(PE_panel)
+```
+
+```{r}
+# Set a seed for reproducibility
+set.seed(123)
+
+# Split the data into training (70%) and testing (30%) sets
+sample_index <- sample(1:nrow(PE_panel), 0.7 * nrow(PE_panel))
+train_data <- PE_panel[sample_index, ]
+test_data <- PE_panel[-sample_index, ]
+
+```
+
+```{r}
+# Fit the random forest model
+rf_model <- randomForest(RETURN.ON.ASSETS ~ CAPITAL + NAV + TDTCS + debtratio, 
+                         data = train_data, 
+                         importance = TRUE, 
+                         ntree = 500)  # You can adjust ntree as necessary
+
+```
+
+```{r}
+# Variable importance plot
+importance(rf_model)
+varImpPlot(rf_model)
+
+```
+
+```{r}
+# Predict on the test data
+predictions <- predict(rf_model, newdata = test_data)
+
+# Compare predicted ROA with actual ROA in the test set
+results <- data.frame(Actual = test_data$RETURN.ON.ASSETS, Predicted = predictions)
+head(results)
+
+```
+
+```{r}
+# Calculate Mean Squared Error
+mse <- mean((results$Actual - results$Predicted)^2)
+print(paste("Mean Squared Error: ", mse))
+
+# Calculate R-squared
+ss_total <- sum((test_data$RETURN.ON.ASSETS - mean(test_data$RETURN.ON.ASSETS))^2)
+ss_res <- sum((test_data$RETURN.ON.ASSETS - predictions)^2)
+r_squared <- 1 - (ss_res / ss_total)
+print(paste("R-squared: ", r_squared))
+
+```
+
+```{r}
+# Tuning the random forest model
+tuned_rf <- randomForest(RETURN.ON.ASSETS ~ CAPITAL + NAV + TDTCS + debtratio,
+                         data = train_data,
+                         ntree = 1000,  # You can experiment with the number of trees
+                         mtry = 2)      # You can experiment with the number of variables
+
+# Predict on test data again
+tuned_predictions <- predict(tuned_rf, newdata = test_data)
+
+# Recalculate performance metrics
+tuned_mse <- mean((test_data$RETURN.ON.ASSETS - tuned_predictions)^2)
+tuned_r_squared <- 1 - sum((test_data$RETURN.ON.ASSETS - tuned_predictions)^2) / ss_total
+
+print(paste("Tuned Mean Squared Error: ", tuned_mse))
+print(paste("Tuned R-squared: ", tuned_r_squared))
+
+```
+
